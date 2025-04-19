@@ -35,7 +35,9 @@ local currencyAliases = {
     ["₿"] = "btc",
 }
 
-local DEFAULT_CURRENCIES = "rub,usd,eur"
+local DEFAULT_CURRENCIES = "rub,usd,ton"
+local DEFAULT_WINDOW_TIMEOUT = 3000
+local DEFAULT_WINDOW_OFFSET = -25
 local CURRENCY_API_BASE_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/"
 
 local function buildPattern()
@@ -316,7 +318,7 @@ local function showBar(input)
         paddingRight = 8,
         paddingBottom = 8,
         paddingTop = 8,
-        offsetY = -25,
+        offsetY = preferences:getInt("window_offset", DEFAULT_WINDOW_OFFSET),
         onMove = function()
             text:setPaddingRelative(12, 12, 12, 8)
             text:setTextSize(14)
@@ -343,7 +345,7 @@ local function showBar(input)
         return { text, tools }
     end)
 
-    timer:schedule(timerTask, 3000)
+    timer:schedule(timerTask, preferences:getInt("window_timeout", DEFAULT_WINDOW_TIMEOUT))
 
     return function(newResult)
         if #newResult == 0 then
@@ -491,6 +493,14 @@ return function(module)
                  :setListener(function(s)
                 baseCurrencies = utils.split(s, ",")
             end),
+            prefs.spacer(8),
+            prefs.textInput("window_timeout", "Window timeout")
+                 :setDefault(DEFAULT_WINDOW_TIMEOUT)
+                 :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" })
+            prefs.spacer(8),
+            prefs.textInput("window_offset", "Window offset")
+                 :setDefault(DEFAULT_WINDOW_OFFSET)
+                 :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" })
             prefs.spacer(16)
         }
     end)
