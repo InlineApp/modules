@@ -316,7 +316,7 @@ local function showBar(input)
         paddingRight = 8,
         paddingBottom = 8,
         paddingTop = 8,
-        offsetY = -50,
+        offsetY = -25,
         onMove = function()
             text:setPaddingRelative(12, 12, 12, 8)
             text:setTextSize(14)
