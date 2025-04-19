@@ -1,14 +1,14 @@
 Module name	Description
-exchange_rates.lua	Модуль создан для распознания в тексте пар чисел и валют, с автоматическим последующим переводом их в другие валюты по актуальным курсам.
-bulling.lua	Сгенерирует добрый ответ вашему собеседнику
-emoji_shortcodes_everywhere.lua	Модуль который заменяет шорткоды emoji
-filter.lua	Автоматически цензурирует все матные слова
-onlysqapi.lua	Использование ИИ используя OnlySq API(https://onlysq.ru)
-pastebin.lua	Модуль для мгновенной загрузки текста на pastebin.com
-person.lua	Генерирует случайного юзера
-logger.lua	Модуль который записывает весь текст написанный на клавиатуре, хранит файл в logs/log.txt относительно места установки модуля, помимо текста пишет имя пакета приложения и текущую дату
-fonts.lua	Текстовые шрифты
-rollback.lua	Требуется подробное описание
-huify.lua	Без описания
-ghoul.lua	Делает отсчет от 1000 до 7
-wttrin.lua	wttr.in wrapper
+exchange_rates.lua	A module created to recognize pairs of numbers and currencies in text, with automatic subsequent conversion to other currencies using up-to-date exchange rates.
+bulling.lua	Generates a kind response to your interlocutor.
+emoji_shortcodes_everywhere.lua	A module that replaces emoji shortcodes.
+filter.lua	Automatically censors all obscene words.
+onlysqapi.lua	Use of AI via OnlySq API (https://onlysq.ru)
+pastebin.lua	A module for instant uploading of text to pastebin.com.
+person.lua	Generates a random user.
+logger.lua	A module that logs all text typed on the keyboard, saves the file to logs/log.txt relative to the module's location, also logs the application package name and the current date.
+fonts.lua	Text fonts.
+rollback.lua	Detailed description required.
+huify.lua	No description.
+ghoul.lua	Counts down from 1000 to 7.
+wttrin.lua	wttr.in wrapper.
