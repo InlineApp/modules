@@ -325,8 +325,6 @@ local function showBar(input)
             bar = nil
         end
     }, function(ui)
-        ui.layout:setAlpha(0.9)
-
         text = ui.text("")
         text:setTextSize(12)
 
