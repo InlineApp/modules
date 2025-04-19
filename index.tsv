@@ -11,3 +11,4 @@ fonts.lua	Текстовые шрифты
 rollback.lua	Требуется подробное описание
 huify.lua	Без описания
 ghoul.lua	Делает отсчет от 1000 до 7
+wttrin.lua	wttr.in wrapper
