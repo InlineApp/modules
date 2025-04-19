@@ -324,7 +324,6 @@ local function showBar(input)
             text:setTextSize(14)
             tools:setVisibility(tools.VISIBLE)
             timerTask:cancel()
-            bar = nil
         end
     }, function(ui)
         text = ui.text("")
@@ -408,23 +407,23 @@ local function loadData(input, currency)
     isLoading = true
     local url = CURRENCY_API_BASE_URL .. currency .. ".min.json"
     http.get({ url = url },
-            function(_, _, string)
-                local decoded
-                local success, err = pcall(json.load, string)
-                if success then
-                    decoded = err
-                    data[currency] = decoded[currency]
-                    updateBar(input)
-                    isLoading = false
-                else
-                    inline:toast("Failed to decode currency data for " .. currency .. ": " .. err)
-                    createAttemptTask()
-                end
-            end,
-            function(_, _)
-                inline:toast("Failed to load currency data for " .. currency)
+        function(_, _, string)
+            local decoded
+            local success, err = pcall(json.load, string)
+            if success then
+                decoded = err
+                data[currency] = decoded[currency]
+                updateBar(input)
+                isLoading = false
+            else
+                inline:toast("Failed to decode currency data for " .. currency .. ": " .. err)
                 createAttemptTask()
             end
+        end,
+        function(_, _)
+            inline:toast("Failed to load currency data for " .. currency)
+            createAttemptTask()
+        end
     )
 end
 
@@ -494,12 +493,12 @@ return function(module)
                 baseCurrencies = utils.split(s, ",")
             end),
             prefs.spacer(8),
-             prefs.textInput("window_timeout", "Window timeout")
+            prefs.textInput("window_timeout", "Window timeout (ms)")
                  :setDefault(DEFAULT_WINDOW_TIMEOUT)
                  :useInt()
                  :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" }),
             prefs.spacer(8),
-            prefs.textInput("window_offset", "Window offset")
+            prefs.textInput("window_offset", "Window offset (dp)")
                  :setDefault(DEFAULT_WINDOW_OFFSET)
                  :useInt()
                  :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" }),
