@@ -496,11 +496,11 @@ return function(module)
             prefs.spacer(8),
             prefs.textInput("window_timeout", "Window timeout")
                  :setDefault(DEFAULT_WINDOW_TIMEOUT)
-                 :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" })
+                 :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" }),
             prefs.spacer(8),
             prefs.textInput("window_offset", "Window offset")
                  :setDefault(DEFAULT_WINDOW_OFFSET)
-                 :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" })
+                 :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" }),
             prefs.spacer(16)
         }
     end)
