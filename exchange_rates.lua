@@ -494,11 +494,15 @@ return function(module)
                 baseCurrencies = utils.split(s, ",")
             end),
             prefs.spacer(8),
-            prefs.textInput("window_timeout", "Window timeout")
+            prefs.textInput("Window timeout", function(text)
+                preferences:edit():putInt("window_timeout", tonumber(text)):apply()
+            end)
                  :setDefault(DEFAULT_WINDOW_TIMEOUT)
                  :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" }),
             prefs.spacer(8),
-            prefs.textInput("window_offset", "Window offset")
+            prefs.textInput("Window offset", function(text)
+                preferences:edit():putInt("window_offset", tonumber(text)):apply()
+            end)
                  :setDefault(DEFAULT_WINDOW_OFFSET)
                  :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" }),
             prefs.spacer(16)
