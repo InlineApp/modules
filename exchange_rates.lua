@@ -309,7 +309,6 @@ local function showBar(input)
 
     local timerTask = inline:timerTask(function()
         window:close()
-        bar = nil
     end)
 
     window = windows.createAligned(input, {
@@ -324,6 +323,9 @@ local function showBar(input)
             text:setTextSize(14)
             tools:setVisibility(tools.VISIBLE)
             timerTask:cancel()
+        end,
+        onClose = function()
+            bar = nil
         end
     }, function(ui)
         text = ui.text("")
@@ -336,7 +338,6 @@ local function showBar(input)
         tools = ui.row({
             ui.smallButton("Close", function()
                 ui:close()
-                bar = nil
             end),
             paste
         })
