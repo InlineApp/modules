@@ -336,6 +336,7 @@ local function showBar(input)
         tools = ui.row({
             ui.smallButton("Close", function()
                 ui:close()
+                bar = nil
             end),
             paste
         })
