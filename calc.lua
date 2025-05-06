@@ -1,4 +1,5 @@
 require "windows"
+require "iutf8"
 
 if not windows:isSupported() then
     inline:toast "The module is not supported on this version of Android"
@@ -63,12 +64,15 @@ end
 local function watcher(input)
     local text = inline:getText(input)
 
-    if #text > 10000 then
-        return
+    local selectionEnd = input:getTextSelectionEnd()
+
+    if selectionEnd == -1 then
+        selectionEnd = nil
     end
 
-    local matcher = pattern:matcher(text)
+    text = utf8.sub(0, selectionEnd)
 
+    local matcher = pattern:matcher(text)
     local expression
 
     while matcher:find() do
