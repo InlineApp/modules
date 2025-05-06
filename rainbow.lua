@@ -1,16 +1,3 @@
---[[
-
-Rainbow 🌈 (=0.6.1)
-
-Is an example of using colorama
-
-{rainbow symbol}$
-{rainbow}$
-
-by https://t.me/wavecat
-
---]]
-
 require "colorama"
 require "utf8"
 
