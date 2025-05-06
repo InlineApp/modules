@@ -13,3 +13,4 @@ huify.lua	No description.
 ghoul.lua	Counts down from 1000 to 7.
 wttrin.lua	wttr.in wrapper.
 calc.lua	Evaluates expressions
+rainbow.lua	Rainbow module example
