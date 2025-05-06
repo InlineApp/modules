@@ -64,13 +64,17 @@ end
 local function watcher(input)
     local text = inline:getText(input)
 
+    if #text == 0 then
+        return
+    end
+
     local selectionEnd = input:getTextSelectionEnd()
 
     if selectionEnd == -1 then
         selectionEnd = nil
     end
 
-    text = utf8.sub(0, selectionEnd)
+    text = utf8.sub(text, 0, selectionEnd)
 
     local matcher = pattern:matcher(text)
     local expression
