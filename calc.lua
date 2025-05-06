@@ -18,6 +18,14 @@ local window
 
 local timer = inline:getTimer()
 
+local function pasteFromClipboard(input, text)
+    local clipboardService = inline:getSystemService(inline.CLIPBOARD_SERVICE)
+    local ClipData = luajava.bindClass("android.content.ClipData")
+    local clip = ClipData:newPlainText("calc", text)
+    clipboardService:setPrimaryClip(clip)
+    inline:paste(input)
+end
+
 local function showWindow(input, result)
     local timerTask = inline:timerTask(function()
         window.close()
@@ -34,7 +42,12 @@ local function showWindow(input, result)
         end
     }, function(ui)
         button = ui.button(result, function()
-            windows.insertText(button:getText())
+            if preferences:getBoolean("calc_use_clipboard_paste", false) then
+                pasteFromClipboard(input, result)
+            else
+                windows.insertText(button:getText())
+            end
+
             window.close()
         end)
 
@@ -107,7 +120,11 @@ local function watcher(input)
             end
 
             if preferences:getBoolean("calc_auto_insert", false) then
-                return inline:insertText(input, result)
+                if preferences:getBoolean("calc_use_clipboard_paste", false) then
+                    pasteFromClipboard(input, result)
+                else
+                    return inline:insertText(input, result)
+                end
             else
                 return updateWindow(input, tostring(result))
             end
@@ -134,7 +151,9 @@ return function(module)
                 end
             end),
             prefs.checkBox("calc_auto_insert", "Auto insert"),
-            prefs.spacer(8),
+            prefs.checkBox("calc_use_clipboard_paste", "Use clipboard to paste"),
+            "Using the clipboard preserves text formatting in applications like Telegram.",
+            prefs.spacer(16),
             prefs.textInput("calc_window_timeout", "Window timeout (ms)")
                  :setDefault(DEFAULT_WINDOW_TIMEOUT)
                  :useInt()
