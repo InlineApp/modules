@@ -1,107 +1,233 @@
---[[
+require "menu"
+require "windows"
 
-Rollback
-
-Модуль для поиска фраз написанных за день
-
-Представляет из себя буфер который хранит написанный текст, максимум 750 изменений (в качестве оптимизации запись строки с конца записывается в последнее изменение или это создает новое событие)
-
-{rollback текст} - открывает терминал для поиск по логу, принимает данные команды:
-
-w - следующая фраза
-s - предыдущая фраза
-l - переход к концу
-f - переход к началу
-e - выход без выбора
-r - выбор текущей фразы и выход
-0..9 - изменение шага для команд w | s
-
---]]
+local preferences = inline:getDefaultSharedPreferences()
 
 local lastString
+local lastState
 local results = {}
 local cursor = 1
 local offset = 1
-local lastState = ""
 
 local buffer = {}
 local viewer = false
+
+local DEFAULT_BUFFER_SIZE = 2000
+local bufferSize = preferences:getInt("rollback_buffer_size", DEFAULT_BUFFER_SIZE)
+
+if bufferSize < 1 then
+    bufferSize = DEFAULT_BUFFER_SIZE
+end
 
 local function startsWith(text, start)
     return text:sub(1, #start) == start
 end
 
-local function shell(input)
-    inline:setText(input, results[cursor] .. "\n" .. cursor .. " >")
-end
-
 local function watcher(input)
-    local text = input:getText()
-    if text == nil or text.toString == nil then
+    local text = inline:getText(input)
+
+    if text == nil or text == "" or viewer then
         return
     end
-    text = text:toString()
-    if viewer then
-        local command = text:sub(#text)
-        if command == "w" then
-            cursor = cursor - offset
-        elseif command == "s" then
-            cursor = cursor + offset
-        elseif command == "l" then
-            cursor = #results
-        elseif command == "f" then
-            cursor = 1
-        elseif tonumber(command) ~= nil then
-            offset = tonumber(command)
-            if offset == 0 then
-                offset = 10
-            end
-        elseif command == "e" then
-            viewer = false
-            inline:setText(input, lastState)
-        elseif command == "r" then
-            viewer = false
-            inline:setText(input, results[cursor])
-        end
-        if cursor > #results then
-            cursor = 1
-        elseif cursor < 1 then
-            cursor = #results
-        end
-        if viewer then
-            shell(input)
-        end
+
+    if lastString ~= nil and startsWith(text, lastString) then
+        text = text:sub(#lastString + 1, #text)
+        lastString = lastString .. text
+        buffer[#buffer] = buffer[#buffer] .. text
     else
-        if lastString ~= nil and startsWith(text, lastString) then
-            text = text:sub(#lastString + 1, #text)
-            lastString = lastString .. text
-            buffer[#buffer] = buffer[#buffer] .. text
-        else
-            lastString = text
-            buffer[#buffer + 1] = text
-            if #buffer > 750 then
-                table.remove(buffer, 1)
+        lastString = text
+        buffer[#buffer + 1] = text
+        if #buffer > bufferSize then
+            table.remove(buffer, 1)
+        end
+    end
+end
+
+local createMenu
+
+local function createSetStepMenu(_, query)
+    local result = { "Step: " }
+
+    for i = 1, 20 do
+        table.insert(result, {
+            caption = "[=" .. i .. "]",
+            action = function(input, query_)
+                offset = i
+                createMenu(input, query_)
+            end
+        })
+        table.insert(result, " ")
+    end
+
+    menu.create(query, result, createMenu)
+end
+
+function createMenu(_, query)
+    if cursor > #results then
+        cursor = 1
+    elseif cursor < 1 then
+        cursor = #results
+    end
+
+    viewer = true
+
+    local offsetText = offset == 1 and "" or tostring(offset)
+
+    local result = {
+        results[cursor],
+        "\n",
+        tostring(cursor),
+        "/",
+        tostring(#results),
+        " ",
+        {
+            caption = "[<" .. offsetText .. "]",
+            action = function(input_, query_)
+                cursor = cursor - offset
+                createMenu(input_, query_)
+            end,
+        },
+        " ",
+        {
+            caption = "[" .. offsetText .. ">]",
+            action = function(input_, query_)
+                cursor = cursor + offset
+                createMenu(input_, query_)
+            end
+        },
+        " ",
+        {
+            caption = "[Set step]",
+            action = function(input_, query_)
+                createSetStepMenu(input_, query_)
+            end
+        },
+        " ",
+        {
+            caption = "[Ok]",
+            action = function(input_, _)
+                viewer = false
+                inline:setText(input_, results[cursor])
+            end
+        }
+    }
+
+    menu.create(query, result, function(input_)
+        viewer = false
+        inline:setText(input_, lastState)
+    end)
+end
+
+local function findResults(query)
+    table.remove(buffer, #buffer)
+
+    if query:getArgs() == "" then
+        results = buffer
+    else
+        results = {}
+
+        for _, v in ipairs(buffer) do
+            if v:find(query:getArgs()) ~= nil then
+                results[#results + 1] = v
             end
         end
     end
+
+    if #results == 0 then
+        query:answer("Not found")
+        return false
+    end
+
+    cursor = #results
+    return true
 end
 
 local function rollback(input, query)
-    table.remove(buffer, #buffer)
-    results = {}
-    for _, v in ipairs(buffer) do
-        if query:getArgs() == "" or v:find(query:getArgs()) ~= nil then
-            results[#results + 1] = v
-        end
-    end
-    if #results == 0 then
-        query:answer("Not found")
+    if not findResults(query) then
         return
     end
-    viewer = true
-    cursor = #results
+
     lastState = query:replaceExpression("")
-    shell(input)
+    createMenu(input, query)
+end
+
+local function showCurrentResult(input)
+    if cursor > #results then
+        cursor = 1
+    elseif cursor < 1 then
+        cursor = #results
+    end
+
+    inline:setText(input, results[cursor] .. "\n[" .. cursor .. "/" .. #results .. "]")
+end
+
+local function frollback(input, query)
+    if not findResults(query) then
+        return
+    end
+
+    showCurrentResult(input)
+    viewer = true
+
+    windows.createAligned(input, {
+        noBackground = true,
+        position = "below",
+        onClose = function()
+            viewer = false
+        end
+    }, function(ui)
+        local undo = ui.button("Undo", function()
+            cursor = cursor - offset
+            showCurrentResult(input)
+        end)
+
+        local redo = ui.button("Redo", function()
+            cursor = cursor + offset
+            showCurrentResult(input)
+        end)
+
+        local apply = ui.button("Apply", function()
+            inline:setText(input, results[cursor])
+            ui:close()
+        end)
+
+        undo:setMinimumWidth(0)
+        redo:setMinimumWidth(0)
+        apply:setMinimumWidth(0)
+
+        undo:setMinWidth(0)
+        redo:setMinWidth(0)
+        apply:setMinWidth(0)
+
+        local setSteps = ui.seekBar(nil, 20)
+                           :setOnProgressChanged(function(i)
+            offset = i + 1
+            local offsetText = offset == 1 and "" or offset
+            undo:setText("Undo " .. offsetText)
+            redo:setText("Redo " .. offsetText)
+        end)
+
+        setSteps:setVisibility(setSteps.GONE)
+
+        local function showSteps()
+            setSteps:setVisibility(setSteps.VISIBLE)
+        end
+
+        ui.setOnLongClickListener(redo, showSteps)
+        ui.setOnLongClickListener(undo, showSteps)
+
+        return {
+            {
+                undo,
+                ui.spacer(4),
+                redo,
+                ui.spacer(4),
+                apply,
+            },
+            ui.spacer(4),
+            setSteps
+        }
+    end)
 end
 
 local function finder()
@@ -111,8 +237,30 @@ local function finder()
     end
 end
 
+local function getPreferences(prefs)
+    return {
+        prefs.textInput("rollback_buffer_size", "Buffer size (edits count)")
+             :setDefault(DEFAULT_BUFFER_SIZE)
+             :setListener(function(s)
+            if bufferSize > 1 then
+                bufferSize = tonumber(s)
+            end
+        end)
+             :useInt()
+             :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" }),
+        prefs.spacer(8)
+    }
+end
+
 return function(module)
+    module:setCategory("Rollback")
+    module:registerCommand("rollback", rollback)
+
+    if (windows.isSupported()) then
+        module:registerCommand("frollback", frollback)
+    end
+
     module:registerWatcher(watcher)
     module:registerCommandFinder(finder)
-    module:registerCommand("rollback", rollback)
+    module:registerPreferences(getPreferences)
 end
