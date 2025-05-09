@@ -11,7 +11,7 @@ local preferences = inline:getDefaultSharedPreferences()
 local Pattern = luajava.bindClass("java.util.regex.Pattern")
 local pattern = Pattern:compile("(?<!\\S)([.,0-9+\\-*/()^<>\\s≥≤≠]+)=$", Pattern.MULTILINE)
 
-local DEFAULT_WINDOW_OFFSET = -20
+local DEFAULT_WINDOW_OFFSET = 20
 local DEFAULT_WINDOW_TIMEOUT = 7000
 
 local window
