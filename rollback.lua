@@ -89,7 +89,7 @@ function createMenu(_, query)
         },
         " ",
         {
-            caption = "[ " .. offsetText .. " >]",
+            caption = "[ " .. offsetText .. " > ]",
             action = function(input_, query_)
                 cursor = cursor + offset
                 createMenu(input_, query_)
