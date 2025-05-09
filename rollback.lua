@@ -81,7 +81,7 @@ function createMenu(_, query)
         tostring(#results),
         " ",
         {
-            caption = "[<" .. offsetText .. "]",
+            caption = "[ <" .. offsetText .. " ]",
             action = function(input_, query_)
                 cursor = cursor - offset
                 createMenu(input_, query_)
@@ -89,7 +89,7 @@ function createMenu(_, query)
         },
         " ",
         {
-            caption = "[" .. offsetText .. ">]",
+            caption = "[ " .. offsetText .. " >]",
             action = function(input_, query_)
                 cursor = cursor + offset
                 createMenu(input_, query_)
