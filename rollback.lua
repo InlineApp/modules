@@ -119,8 +119,6 @@ function createMenu(_, query)
 end
 
 local function findResults(query)
-    table.remove(buffer, #buffer)
-
     if query:getArgs() == "" then
         results = buffer
     else
