@@ -37,7 +37,7 @@ local currencyAliases = {
 
 local DEFAULT_CURRENCIES = "rub,usd,ton"
 local DEFAULT_WINDOW_TIMEOUT = 3000
-local DEFAULT_WINDOW_OFFSET = -25
+local DEFAULT_WINDOW_OFFSET = 25
 local CURRENCY_API_BASE_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/"
 
 local function buildPattern()
