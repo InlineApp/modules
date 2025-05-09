@@ -50,7 +50,7 @@ local function createSetStepMenu(_, query)
 
     for i = 1, 20 do
         table.insert(result, {
-            caption = "[=" .. i .. "]",
+            caption = "[" .. i .. "]",
             action = function(input, query_)
                 offset = i
                 createMenu(input, query_)
@@ -142,7 +142,7 @@ local function findResults(query)
     return true
 end
 
-local function rollback(input, query)
+local function back(input, query)
     if not findResults(query) then
         return
     end
@@ -161,7 +161,7 @@ local function showCurrentResult(input)
     inline:setText(input, results[cursor] .. "\n[" .. cursor .. "/" .. #results .. "]")
 end
 
-local function frollback(input, query)
+local function fback(input, query)
     if not findResults(query) then
         return
     end
@@ -176,35 +176,37 @@ local function frollback(input, query)
             viewer = false
         end
     }, function(ui)
-        local undo = ui.button("Undo", function()
+        local offsetText = offset == 1 and "" or " " .. offset
+
+        local undo = ui.button("Undo" .. offsetText, function()
             cursor = cursor - offset
             showCurrentResult(input)
         end)
 
-        local redo = ui.button("Redo", function()
+        local redo = ui.button("Redo" .. offsetText, function()
             cursor = cursor + offset
             showCurrentResult(input)
         end)
 
-        local apply = ui.button("Apply", function()
+        local ok = ui.button("Ok", function()
             inline:setText(input, results[cursor])
             ui:close()
         end)
 
         undo:setMinimumWidth(0)
         redo:setMinimumWidth(0)
-        apply:setMinimumWidth(0)
+        ok:setMinimumWidth(0)
 
         undo:setMinWidth(0)
         redo:setMinWidth(0)
-        apply:setMinWidth(0)
+        ok:setMinWidth(0)
 
-        local setSteps = ui.seekBar(nil, 20)
+        local setSteps = ui.seekBar(nil, 19)
                            :setOnProgressChanged(function(i)
             offset = i + 1
-            local offsetText = offset == 1 and "" or offset
-            undo:setText("Undo " .. offsetText)
-            redo:setText("Redo " .. offsetText)
+            local offsetText_ = offset == 1 and "" or offset
+            undo:setText("Undo " .. offsetText_)
+            redo:setText("Redo " .. offsetText_)
         end)
 
         setSteps:setVisibility(setSteps.GONE)
@@ -222,10 +224,52 @@ local function frollback(input, query)
                 ui.spacer(4),
                 redo,
                 ui.spacer(4),
-                apply,
+                ok,
             },
             ui.spacer(4),
             setSteps
+        }
+    end)
+end
+
+local function ftime(input, query)
+    if not findResults(query) then
+        return
+    end
+
+    viewer = true
+    lastState = query:replaceExpression("")
+
+    local box = windows.getBoundsInScreen(input)
+
+    windows.createAligned(input, {
+        position = "below",
+        onClose = function()
+            viewer = false
+        end
+    }, function(ui)
+        local seekBar = ui.seekBar(nil, #results)
+                          :setOnProgressChanged(function(i)
+            cursor = i
+            inline:setText(input, results[cursor])
+        end)
+
+        seekBar:setMinWidth(box:width())
+        seekBar:setProgress(#results)
+
+        return {
+            seekBar,
+            ui.spacer(8),
+            {
+                ui.button("Cancel", function()
+                    inline:setText(input, lastState)
+                    ui:close()
+                end),
+                ui.spacer(8),
+                ui.button("Apply", function()
+                    ui:close()
+                end)
+            }
         }
     end)
 end
@@ -253,13 +297,15 @@ local function getPreferences(prefs)
 end
 
 return function(module)
-    module:setCategory("Rollback")
-    module:registerCommand("rollback", rollback)
+    module:setCategory("Roll")
+    module:registerCommand("back", back)
 
     if (windows.isSupported()) then
-        module:registerCommand("frollback", frollback)
+        module:registerCommand("fback", fback)
+        module:registerCommand("ftime", ftime)
     end
 
+    module:setCategory("Rollback")
     module:registerWatcher(watcher)
     module:registerCommandFinder(finder)
     module:registerPreferences(getPreferences)
