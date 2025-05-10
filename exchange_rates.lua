@@ -1,4 +1,5 @@
 require "http"
+require "json"
 require "iutf8"
 require "windows"
 
