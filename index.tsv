@@ -15,3 +15,4 @@ wttrin.lua	wttr.in wrapper.
 calc.lua	Evaluates expressions
 rainbow.lua	Rainbow module example
 find_cyrillic.lua	Converts only Cyrillic characters in the given string to uppercase
+minivim.lua	MiniVIM
