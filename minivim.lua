@@ -5,7 +5,6 @@ require "windows"
 local context = {}
 local actualInput
 
---[[
 local help = [[Navigation
 - h - Move cursor left (stays within the current line)
 - l - Move cursor right (stays within the current line)
@@ -25,7 +24,6 @@ Insertion Mode
 - O - Create a new line above the current line and enter insert mode
 Editing
 - dd - Delete the current line]]
---]]
 
 local function getContext(input)
     local current = context[input:getPackageName()]
@@ -127,6 +125,10 @@ local function getLineByNumber(text, lineNum)
     end
 
     return lineStart, lineEnd
+end
+
+local function isWordChar(char)
+    return char:match("[%w_]") ~= nil
 end
 
 local function deleteCurrentLine(text, pos)
@@ -244,7 +246,7 @@ local singleCommands = {
         inline:setSelection(input, current.position, current.position)
     end,
 
-    ["G"] = function(input, current)
+    G = function(input, current)
         current.position = utf8.len(current.text)
         inline:setSelection(input, current.position, current.position)
     end,
@@ -288,80 +290,6 @@ local singleCommands = {
         current.mode = "INSERT"
         goToInsert(input, current)
         updateTextButton(current)
-    end,
-
-    w = function(input, current)
-        local text = current.text
-        local pos = current.position
-        local textLen = utf8.len(text)
-
-        if pos >= textLen - 1 then
-            return
-        end
-
-        local currentChar = utf8.sub(text, pos, pos + 1)
-        local inWord = currentChar:match("[%w_]") ~= nil
-        local inSpace = currentChar == " " or currentChar == "\t" or currentChar == "\n"
-
-        local i = pos + 1
-        while i < textLen do
-            local char = utf8.sub(text, i, i + 1)
-            local isWord = char:match("[%w_]") ~= nil
-            local isSpace = char == " " or char == "\t" or char == "\n"
-
-            if (inWord and not isWord) or (inSpace and not isSpace) or (not inWord and not inSpace and (isWord or isSpace)) then
-                break
-            end
-
-            i = i + 1
-        end
-
-        while i < textLen do
-            local char = utf8.sub(text, i, i + 1)
-            if char ~= " " and char ~= "\t" and char ~= "\n" then
-                break
-            end
-            i = i + 1
-        end
-
-        current.position = i
-        inline:setSelection(input, current.position, current.position)
-    end,
-
-    b = function(input, current)
-        local text = current.text
-        local pos = current.position
-
-        if pos <= 0 then
-            return
-        end
-
-        local i = pos - 1
-        while i > 0 do
-            local char = utf8.sub(text, i, i + 1)
-            if char ~= " " and char ~= "\t" and char ~= "\n" then
-                break
-            end
-            i = i - 1
-        end
-
-        local currentChar = utf8.sub(text, i, i + 1)
-        local currentIsWord = currentChar:match("[%w_]") ~= nil
-
-        while i > 0 do
-            local prevChar = utf8.sub(text, i - 1, i)
-            local prevIsWord = prevChar:match("[%w_]") ~= nil
-            local prevIsSpace = prevChar == " " or prevChar == "\t" or prevChar == "\n"
-
-            if (currentIsWord and not prevIsWord) or (not currentIsWord and (prevIsWord or prevIsSpace)) then
-                break
-            end
-
-            i = i - 1
-        end
-
-        current.position = i
-        inline:setSelection(input, current.position, current.position)
     end,
 
     o = function(input, current)
@@ -408,12 +336,237 @@ local singleCommands = {
     gg = function(input, current)
         current.position = 0
         inline:setSelection(input, current.position, current.position)
+    end,
+
+    w = function(input, current)
+        local text = current.text
+        local textLen = utf8.len(text)
+        local pos = current.position
+
+        if pos >= textLen - 1 then
+            return
+        end
+
+        pos = pos + 1
+
+        local currentChar = utf8.sub(text, pos, pos + 1)
+        if isWordChar(currentChar) then
+            while pos < textLen and isWordChar(utf8.sub(text, pos, pos + 1)) do
+                pos = pos + 1
+            end
+        end
+
+        while pos < textLen and not isWordChar(utf8.sub(text, pos, pos + 1)) do
+            pos = pos + 1
+        end
+
+        current.position = pos
+        inline:setSelection(input, current.position, current.position)
+    end,
+
+    b = function(input, current)
+        local text = current.text
+        local pos = current.position
+
+        if pos <= 0 then
+            return
+        end
+
+        pos = pos - 1
+
+        while pos > 0 and not isWordChar(utf8.sub(text, pos, pos + 1)) do
+            pos = pos - 1
+        end
+
+        if pos > 0 and isWordChar(utf8.sub(text, pos, pos + 1)) then
+            while pos > 0 and isWordChar(utf8.sub(text, pos - 1, pos)) do
+                pos = pos - 1
+            end
+        end
+
+        current.position = pos
+        inline:setSelection(input, current.position, current.position)
+    end,
+
+    e = function(input, current)
+        local text = current.text
+        local textLen = utf8.len(text)
+        local pos = current.position
+
+        if pos >= textLen - 1 then
+            return
+        end
+
+        local currentAtEndOfWord = pos < textLen - 1 and
+            isWordChar(utf8.sub(text, pos, pos + 1)) and
+            (pos == textLen - 1 or not isWordChar(utf8.sub(text, pos + 1, pos + 2)))
+
+        if currentAtEndOfWord then
+            pos = pos + 1
+            while pos < textLen - 1 and not isWordChar(utf8.sub(text, pos, pos + 1)) do
+                pos = pos + 1
+            end
+        end
+
+        if not isWordChar(utf8.sub(text, pos, pos + 1)) then
+            while pos < textLen - 1 and not isWordChar(utf8.sub(text, pos, pos + 1)) do
+                pos = pos + 1
+            end
+        end
+
+        if pos < textLen - 1 then
+            while pos < textLen - 1 and isWordChar(utf8.sub(text, pos + 1, pos + 2)) do
+                pos = pos + 1
+            end
+        end
+
+        current.position = pos
+        inline:setSelection(input, current.position, current.position)
+    end,
+
+    x = function(input, current)
+        local text = current.text
+        local textLen = utf8.len(text)
+
+        if textLen > 0 and current.position < textLen then
+            local newText = utf8.sub(text, 0, current.position) ..
+                utf8.sub(text, current.position + 1)
+            current.text = newText
+            current.len = utf8.len(newText)
+            inline:setText(input, current.text)
+            inline:setSelection(input, current.position, current.position)
+        end
+    end,
+
+    X = function(input, current)
+        local text = current.text
+
+        if current.position > 0 then
+            local newText = utf8.sub(text, 0, current.position - 1) ..
+                utf8.sub(text, current.position)
+            current.text = newText
+            current.len = utf8.len(newText)
+            current.position = current.position - 1
+            inline:setText(input, current.text)
+            inline:setSelection(input, current.position, current.position)
+        end
+    end,
+
+    ["~"] = function(input, current)
+        local text = current.text
+        local textLen = utf8.len(text)
+
+        if textLen > 0 and current.position < textLen then
+            local char = utf8.sub(text, current.position, current.position + 1)
+            local newChar
+
+            if char:match("%u") then
+                newChar = char:lower()
+            else
+                newChar = char:upper()
+            end
+
+            local newText = utf8.sub(text, 0, current.position) ..
+                newChar ..
+                utf8.sub(text, current.position + 1)
+
+            current.text = newText
+            current.len = utf8.len(newText)
+            current.position = current.position + 1
+
+            inline:setText(input, current.text)
+            inline:setSelection(input, current.position, current.position)
+        end
+    end,
+
+    s = function(input, current)
+        local text = current.text
+        local textLen = utf8.len(text)
+
+        if textLen > 0 and current.position < textLen then
+            local newText = utf8.sub(text, 0, current.position) ..
+                utf8.sub(text, current.position + 1)
+            current.text = newText
+            current.len = utf8.len(newText)
+
+            current.mode = "INSERT"
+            inline:setText(input, current.text)
+            inline:setSelection(input, current.position, current.position)
+            updateTextButton(current)
+        end
+    end,
+
+    S = function(input, current)
+        local text = current.text
+
+        local lineStart, lineEnd, _ = getCurrentLineInfo(text, current.position)
+        local before = ""
+        if lineStart > 0 then
+            before = utf8.sub(text, 0, lineStart)
+        end
+
+        local after = ""
+        if lineEnd < utf8.len(text) - 1 then
+            after = utf8.sub(text, lineEnd + 1)
+        end
+
+        local newText = before .. after
+        if newText == "" then
+            newText = ""
+        end
+
+        current.text = newText
+        current.len = utf8.len(newText)
+        current.position = lineStart
+
+        current.mode = "INSERT"
+        inline:setText(input, current.text)
+        inline:setSelection(input, current.position, current.position)
+        updateTextButton(current)
+    end,
+
+    C = function(input, current)
+        local text = current.text
+
+        local _, lineEnd, _ = getCurrentLineInfo(text, current.position)
+
+        local newText = utf8.sub(text, 0, current.position) ..
+            utf8.sub(text, lineEnd + 1)
+
+        current.text = newText
+        current.len = utf8.len(newText)
+
+        current.mode = "INSERT"
+        inline:setText(input, current.text)
+        inline:setSelection(input, current.position, current.position)
+        updateTextButton(current)
     end
 }
 
 local bufferedCommands = {
     g = true,
     d = true
+}
+
+local pendingCommands = {
+    r = function(input, current, char)
+        local text = current.text
+        local textLen = utf8.len(text)
+
+        if textLen > 0 and current.position < textLen then
+            local newText = utf8.sub(text, 0, current.position) ..
+                char ..
+                utf8.sub(text, current.position + 1)
+
+            current.text = newText
+            current.len = utf8.len(newText)
+
+            inline:setText(input, current.text)
+            inline:setSelection(input, current.position, current.position)
+        end
+
+        return true
+    end
 }
 
 local function showSwitcher(input, query)
@@ -473,6 +626,18 @@ local function watcher(input)
 
             local cmdString = utf8.sub(text, selectionStart - delta, selectionStart)
 
+            if current.pendingCommand then
+                local handler = pendingCommands[current.pendingCommand]
+                if handler then
+                    local finished = handler(input, current, cmdString)
+                    if finished then
+                        current.pendingCommand = nil
+                    end
+                    current.ignore = true
+                    return
+                end
+            end
+
             local command = singleCommands[cmdString]
             local isBuffered = bufferedCommands[cmdString]
 
@@ -480,6 +645,10 @@ local function watcher(input)
                 current.ignore = true
                 inline:setText(input, current.text)
                 command(input, current)
+            elseif pendingCommands[cmdString] then
+                current.pendingCommand = cmdString
+                current.ignore = true
+                inline:setText(input, current.text)
             elseif not isBuffered then
                 inline:setText(input, current.text)
             end
