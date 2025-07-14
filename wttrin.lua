@@ -85,4 +85,6 @@ return function(module)
     if aliases:getString("w", "") == "" then
         aliases:edit():putString("w", "weather"):apply()
     end
+
+    module:saveLazyLoad()
 end
