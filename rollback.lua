@@ -252,7 +252,6 @@ local function ftime(input, query)
             inline:setText(input, results[cursor])
         end)
 
-        seekBar:setMinWidth(box:width())
         seekBar:setProgress(#results)
 
         return {
