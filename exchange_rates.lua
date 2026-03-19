@@ -1,13 +1,15 @@
-require "http"
-require "json"
-require "iutf8"
 require "windows"
 
 if not windows:isSupported() then
+    inline:toast "The module is not supported on this version of Android"
     return
 end
 
-local Pattern = luajava.bindClass("java.util.regex.Pattern")
+require "http"
+require "json"
+require "iutf8"
+
+local Pattern = require "java.util.regex.Pattern"
 
 local timer = inline:getTimer()
 local currencyAliases = {
@@ -329,19 +331,27 @@ local function showBar(input)
             bar = nil
         end
     }, function(ui)
-        text = ui.text("")
+        text = ui.text ""
         text:setTextSize(12)
 
         local paste = ui.smallButton("Paste", function()
-            windows.insertText(text:getText())
+            if not windows.insertText(text:getText()) then
+                return inline:toast "Please focus on the desired input"
+            end
         end)
 
-        tools = ui.row({
+        paste:setEnabled(windows.isInsertAvailable())
+
+        ui.onFocusChanged = function(isFocused)
+            paste:setEnabled(not isFocused and windows.isInsertAvailable())
+        end
+
+        tools = ui.row {
             ui.smallButton("Close", function()
                 ui:close()
             end),
             paste
-        })
+        }
 
         tools:setVisibility(tools.GONE)
         return { text, tools }
@@ -410,23 +420,21 @@ local function loadData(input, currency)
     isLoading = true
     local url = CURRENCY_API_BASE_URL .. currency .. ".min.json"
     http.get({ url = url },
-        function(_, _, string)
-            local decoded
-            local success, err = pcall(json.load, string)
-            if success then
-                decoded = err
-                data[currency] = decoded[currency]
-                updateBar(input)
-                isLoading = false
-            else
-                inline:toast("Failed to decode currency data for " .. currency .. ": " .. err)
+            function(_, _, string)
+                local success, decoded = pcall(json.load, string)
+                if success then
+                    data[currency] = decoded[currency]
+                    updateBar(input)
+                    isLoading = false
+                else
+                    inline:toast("Failed to decode currency data for " .. currency .. ": " .. decoded)
+                    createAttemptTask()
+                end
+            end,
+            function()
+                inline:toast("Failed to load currency data for " .. currency)
                 createAttemptTask()
             end
-        end,
-        function(_, _)
-            inline:toast("Failed to load currency data for " .. currency)
-            createAttemptTask()
-        end
     )
 end
 
@@ -480,7 +488,7 @@ return function(module)
 
     module:registerPreferences(function(prefs)
         return {
-            prefs.checkBox("exchange_rates", "Enabled")
+            prefs.switch("exchange_rates", "Enabled")
                  :setDefault(true)
                  :setListener(function(isChecked)
                 if isChecked then
@@ -489,23 +497,32 @@ return function(module)
                     module:unregisterWatcher(watcher)
                 end
             end),
-            prefs.spacer(8),
-            prefs.textInput("currencies", "Currencies")
-                 :setDefault(DEFAULT_CURRENCIES)
-                 :setListener(function(s)
-                baseCurrencies = utils.split(s, ",")
-            end),
-            prefs.spacer(8),
-            prefs.textInput("window_timeout", "Window timeout (ms)")
-                 :setDefault(DEFAULT_WINDOW_TIMEOUT)
-                 :useInt()
-                 :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" }),
-            prefs.spacer(8),
-            prefs.textInput("window_offset", "Window offset (dp)")
-                 :setDefault(DEFAULT_WINDOW_OFFSET)
-                 :useInt()
-                 :setInputType({ "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" }),
-            prefs.spacer(16)
+            prefs.spacer(12),
+            prefs.card {
+                prefs.text "Currencies":bold():size(16),
+                prefs.spacer(4),
+                prefs.text "Comma-separated list of base currencies to convert to.":size(12),
+                prefs.spacer(6),
+                prefs.textInput("currencies", "Currencies")
+                     :setDefault(DEFAULT_CURRENCIES)
+                     :setListener(function(s)
+                    baseCurrencies = utils.split(s, ",")
+                end),
+            },
+            prefs.spacer(12),
+            prefs.card {
+                prefs.text "Window":bold():size(16),
+                prefs.spacer(8),
+                prefs.textInput("window_timeout", "Timeout (ms)")
+                     :setDefault(DEFAULT_WINDOW_TIMEOUT)
+                     :useInt()
+                     :setInputType { "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" },
+                prefs.spacer(8),
+                prefs.textInput("window_offset", "Offset (dp)")
+                     :setDefault(DEFAULT_WINDOW_OFFSET)
+                     :useInt()
+                     :setInputType { "TYPE_CLASS_NUMBER", "TYPE_NUMBER_FLAG_SIGNED" },
+            },
         }
     end)
 
