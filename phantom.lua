@@ -153,8 +153,8 @@ end
 
 -- Floating reveal window
 
-local function freveal(input, query)
-    windows.createAligned(input, { noLimits = true }, function(ui)
+local function freveal(_, query)
+    windows.create({ noLimits = true }, function(ui)
         local text = query:replaceExpression("")
         local messages = decode(text)
 
@@ -203,10 +203,11 @@ end
 
 -- Floating hide composer
 
-local function fhide(input, query)
-    windows.createAligned(input, { noLimits = true }, function(ui)
-        local secretInput = ui.textInput("Hidden message", "The secret")
+local function fhide(_, query)
+    windows.create({ noLimits = true }, function(ui)
+        local secretInput = ui.textInput "Secret message"
 
+        secretInput:getEditText():setMaxLines(5)
         secretInput:setText(query:getArgs())
 
         local paste = ui.smallButton("Paste", function()
