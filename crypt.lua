@@ -4,7 +4,7 @@ require "menu"
 require "windows"
 
 local MessageDigest = require "java.security.MessageDigest"
-local Base64 = require "java.util.Base64"
+local Base64 = require "android.util.Base64"
 local UUID = require "java.util.UUID"
 
 -- XOR helper (pure Lua, no bit32 needed)
@@ -140,11 +140,11 @@ end
 -- Base64 via Java
 local function base64_encode(text)
     local bytes = luajava.newInstance("java.lang.String", text):getBytes("UTF-8")
-    return Base64:getEncoder():encodeToString(bytes)
+    return Base64:encodeToString(bytes, Base64.NO_WRAP)
 end
 
 local function base64_decode(text)
-    local bytes = Base64:getDecoder():decode(text)
+    local bytes = Base64:decode(text, Base64.NO_WRAP)
     return luajava.newInstance("java.lang.String", bytes, "UTF-8"):toString()
 end
 
@@ -356,7 +356,8 @@ end
 
 return function(module)
     module:setCategory "Crypt"
-    
+    module:setDescription "Encryption, encoding, hashing, and password generation toolkit"
+
     module:registerCommand("encrypt", encrypt_cmd, "XOR encrypt: encrypt <key> [text]")
     module:registerCommand("decrypt", decrypt_cmd, "XOR decrypt: decrypt <key> [hex]")
     module:registerCommand("rot13", rot13_cmd, "ROT13 cipher")
