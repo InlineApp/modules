@@ -2,32 +2,19 @@ require "utils"
 require "menu"
 require "windows"
 
-local Base64 = require "android.util.Base64"
-
 -- Zero-width characters for steganographic encoding
 local ZWS  = "\xE2\x80\x8B"  -- U+200B Zero Width Space       (bit 0)
 local ZWNJ = "\xE2\x80\x8C"  -- U+200C Zero Width Non-Joiner  (bit 1)
 local ZWJ  = "\xE2\x80\x8D"  -- U+200D Zero Width Joiner      (marker)
-
--- Convert any text to ASCII-safe Base64 via Java (handles Cyrillic, emoji, etc.)
-local function to_ascii(text)
-    local bytes = luajava.newInstance("java.lang.String", text):getBytes("UTF-8")
-    return Base64:encodeToString(bytes, Base64.NO_WRAP)
-end
-
-local function from_ascii(ascii)
-    local bytes = Base64:decode(ascii, Base64.NO_WRAP)
-    return luajava.newInstance("java.lang.String", bytes, "UTF-8"):toString()
-end
+local BITS = 16               -- bits per character (covers full BMP)
 
 local function encode(message)
-    local safe = to_ascii(message)
     local parts = { ZWJ }
 
-    for i = 1, #safe do
-        local byte = string.byte(safe, i)
-        for bit = 7, 0, -1 do
-            local value = math.floor(byte / (2 ^ bit)) % 2
+    for i = 1, #message do
+        local cp = string.byte(message, i)
+        for bit = BITS - 1, 0, -1 do
+            local value = math.floor(cp / (2 ^ bit)) % 2
             parts[#parts + 1] = value == 1 and ZWNJ or ZWS
         end
     end
@@ -52,21 +39,18 @@ local function decode(text)
                 bits[#bits + 1] = 0
             end
 
-            if #bits == 8 then
-                local byte = 0
-                for j = 1, 8 do
-                    byte = byte * 2 + bits[j]
+            if #bits == BITS then
+                local cp = 0
+                for j = 1, BITS do
+                    cp = cp * 2 + bits[j]
                 end
-                chars[#chars + 1] = string.char(byte)
+                chars[#chars + 1] = string.char(cp)
                 bits = {}
             end
         end
 
         if #chars > 0 then
-            local ok, result = pcall(from_ascii, table.concat(chars))
-            if ok then
-                messages[#messages + 1] = result
-            end
+            messages[#messages + 1] = table.concat(chars)
         end
     end
 
@@ -246,6 +230,7 @@ end
 
 return function(module)
     module:setCategory "Phantom"
+
 
     module:registerCommand("hide", utils.hasArgs(hide), "Encodes a secret into invisible zero-width characters")
     module:registerCommand("reveal", reveal, "Decodes hidden messages from the text")
