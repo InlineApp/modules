@@ -2,16 +2,30 @@ require "utils"
 require "menu"
 require "windows"
 
+local Base64 = require "java.util.Base64"
+
 -- Zero-width characters for steganographic encoding
 local ZWS  = "\xE2\x80\x8B"  -- U+200B Zero Width Space       (bit 0)
 local ZWNJ = "\xE2\x80\x8C"  -- U+200C Zero Width Non-Joiner  (bit 1)
 local ZWJ  = "\xE2\x80\x8D"  -- U+200D Zero Width Joiner      (marker)
 
+-- Convert any text to ASCII-safe Base64 via Java (handles Cyrillic, emoji, etc.)
+local function to_ascii(text)
+    local bytes = luajava.newInstance("java.lang.String", text):getBytes("UTF-8")
+    return Base64:getEncoder():encodeToString(bytes)
+end
+
+local function from_ascii(ascii)
+    local bytes = Base64:getDecoder():decode(ascii)
+    return luajava.newInstance("java.lang.String", bytes, "UTF-8"):toString()
+end
+
 local function encode(message)
+    local safe = to_ascii(message)
     local parts = { ZWJ }
 
-    for i = 1, #message do
-        local byte = string.byte(message, i)
+    for i = 1, #safe do
+        local byte = string.byte(safe, i)
         for bit = 7, 0, -1 do
             local value = math.floor(byte / (2 ^ bit)) % 2
             parts[#parts + 1] = value == 1 and ZWNJ or ZWS
@@ -27,7 +41,7 @@ local function decode(text)
     local pattern = ZWJ .. "(.-)" .. ZWJ
 
     for hidden in text:gmatch(pattern) do
-        local bytes = {}
+        local chars = {}
         local bits = {}
 
         for i = 1, #hidden, 3 do
@@ -43,13 +57,16 @@ local function decode(text)
                 for j = 1, 8 do
                     byte = byte * 2 + bits[j]
                 end
-                bytes[#bytes + 1] = string.char(byte)
+                chars[#chars + 1] = string.char(byte)
                 bits = {}
             end
         end
 
-        if #bytes > 0 then
-            messages[#messages + 1] = table.concat(bytes)
+        if #chars > 0 then
+            local ok, result = pcall(from_ascii, table.concat(chars))
+            if ok then
+                messages[#messages + 1] = result
+            end
         end
     end
 
@@ -58,10 +75,6 @@ end
 
 local function cleanText(text)
     return text:gsub(ZWS, ""):gsub(ZWNJ, ""):gsub(ZWJ, "")
-end
-
-local function hasHidden(text)
-    return text:find(ZWJ) ~= nil
 end
 
 -- Commands
@@ -192,22 +205,18 @@ end
 
 local function fhide(input, query)
     windows.createAligned(input, { noLimits = true }, function(ui)
-        local visibleInput = ui.textInput("Visible text", "What people see")
         local secretInput = ui.textInput("Hidden message", "The secret")
 
-        visibleInput:setText(query:getArgs())
+        secretInput:setText(query:getArgs())
 
         local paste = ui.smallButton("Paste", function()
-            local visible = visibleInput:getText()
             local secret = secretInput:getText()
 
             if secret == "" then
                 return inline:toast "Enter a hidden message"
             end
 
-            local result = visible .. encode(secret)
-
-            if not windows.insertText(result) then
+            if not windows.insertText(encode(secret)) then
                 return inline:toast "Please focus on the desired input"
             end
         end)
@@ -219,8 +228,6 @@ local function fhide(input, query)
         end
 
         return {
-            visibleInput,
-            ui.spacer(8),
             secretInput,
             ui.spacer(8),
             {
@@ -238,7 +245,8 @@ end
 
 return function(module)
     module:setCategory "Phantom"
-  
+    module:setDescription "Hide secret messages inside normal text using invisible characters"
+
     module:registerCommand("hide", utils.hasArgs(hide), "Encodes a secret into invisible zero-width characters")
     module:registerCommand("reveal", reveal, "Decodes hidden messages from the text")
     module:registerCommand("clean", clean, "Removes all invisible characters from text")
