@@ -1,3 +1,4 @@
+require "iutf8"
 require "utils"
 require "menu"
 require "windows"
@@ -42,23 +43,42 @@ local function xor_decrypt(hex, key)
     return table.concat(result)
 end
 
--- ROT13
+-- Build shift map for Latin (26) + Cyrillic А-Я (32)
+local function make_shift_map(shift)
+    local map = {}
+    for i = 0, 25 do
+        map[string.char(65 + i)] = string.char(65 + (i + shift) % 26)
+        map[string.char(97 + i)] = string.char(97 + (i + shift) % 26)
+    end
+    for i = 0, 31 do
+        map[utf8.char(0x410 + i)] = utf8.char(0x410 + (i + shift) % 32)
+        map[utf8.char(0x430 + i)] = utf8.char(0x430 + (i + shift) % 32)
+    end
+    return map
+end
+
+-- ROT13 (Latin) + ROT16 (Cyrillic, half of 32)
+local rot_map = make_shift_map(13)
+for i = 0, 31 do
+    rot_map[utf8.char(0x410 + i)] = utf8.char(0x410 + (i + 16) % 32)
+    rot_map[utf8.char(0x430 + i)] = utf8.char(0x430 + (i + 16) % 32)
+end
+
 local function rot13(text)
-    return text:gsub("%a", function(c)
-        local base = c:match("%l") and 97 or 65
-        return string.char((string.byte(c) - base + 13) % 26 + base)
+    return text:gsub(utf8.charpattern, function(c)
+        return rot_map[c] or c
     end)
 end
 
--- Caesar cipher
+-- Caesar cipher (same shift for both alphabets)
 local function caesar(text, shift)
-    return text:gsub("%a", function(c)
-        local base = c:match("%l") and 97 or 65
-        return string.char((string.byte(c) - base + shift) % 26 + base)
+    local map = make_shift_map(shift)
+    return text:gsub(utf8.charpattern, function(c)
+        return map[c] or c
     end)
 end
 
--- Morse code tables
+-- Morse code tables (Latin + Cyrillic)
 local to_morse = {
     A = ".-", B = "-...", C = "-.-.", D = "-..", E = ".", F = "..-.",
     G = "--.", H = "....", I = "..", J = ".---", K = "-.-", L = ".-..",
@@ -75,15 +95,37 @@ local to_morse = {
     ["("] = "-.--.", [")"] = "-.--.-", ["@"] = ".--.-.",
 }
 
+-- Russian Morse code
+local ru_morse = {
+    [0x410] = ".-",     [0x411] = "-...",   [0x412] = ".--",    [0x413] = "--.",
+    [0x414] = "-..",    [0x415] = ".",       [0x416] = "...-",   [0x417] = "--..",
+    [0x418] = "..",     [0x419] = ".---",    [0x41A] = "-.-",    [0x41B] = ".-..",
+    [0x41C] = "--",     [0x41D] = "-.",      [0x41E] = "---",    [0x41F] = ".--.",
+    [0x420] = ".-.",    [0x421] = "...",     [0x422] = "-",       [0x423] = "..-",
+    [0x424] = "..-.",   [0x425] = "....",    [0x426] = "-.-.",    [0x427] = "---.",
+    [0x428] = "----",   [0x429] = "--.-",    [0x42A] = "--.--",   [0x42B] = "-.-",
+    [0x42C] = "-..-",   [0x42D] = "..-..",   [0x42E] = "..--",    [0x42F] = ".-.-",
+    [0x401] = ".",
+}
+
+for cp, morse in pairs(ru_morse) do
+    to_morse[utf8.char(cp)] = morse
+    to_morse[utf8.char(cp + 0x20)] = morse  -- lowercase
+end
+
 local from_morse = {}
-for k, v in pairs(to_morse) do from_morse[v] = k end
+for k, v in pairs(to_morse) do
+    if not from_morse[v] then
+        from_morse[v] = k
+    end
+end
 
 local function morse_encode(text)
     local result = {}
-    for i = 1, #text do
-        local c = text:sub(i, i):upper()
-        result[#result + 1] = to_morse[c] or c
-    end
+    text:gsub(utf8.charpattern, function(c)
+        local upper = string.upper(c)
+        result[#result + 1] = to_morse[upper] or to_morse[c] or c
+    end)
     return table.concat(result, " ")
 end
 
@@ -314,6 +356,7 @@ end
 
 return function(module)
     module:setCategory "Crypt"
+    module:setDescription "Encryption, encoding, hashing, and password generation toolkit"
 
     module:registerCommand("encrypt", encrypt_cmd, "XOR encrypt: encrypt <key> [text]")
     module:registerCommand("decrypt", decrypt_cmd, "XOR decrypt: decrypt <key> [hex]")
