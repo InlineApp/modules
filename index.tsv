@@ -18,3 +18,4 @@ find_cyrillic.lua	Converts only Cyrillic characters in the given string to upper
 minivim.lua	MiniVIM
 counter.lua	Live character, word and line counter
 phantom.lua	Hide secret messages inside normal text using invisible characters
+crypt.lua	Encryption, encoding, hashing, and password generation toolkit
