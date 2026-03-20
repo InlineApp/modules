@@ -356,7 +356,6 @@ end
 
 return function(module)
     module:setCategory "Crypt"
-    module:setDescription "Encryption, encoding, hashing, and password generation toolkit"
 
     module:registerCommand("encrypt", encrypt_cmd, "XOR encrypt: encrypt <key> [text]")
     module:registerCommand("decrypt", decrypt_cmd, "XOR decrypt: decrypt <key> [hex]")
