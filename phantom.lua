@@ -246,7 +246,6 @@ end
 
 return function(module)
     module:setCategory "Phantom"
-    module:setDescription "Hide secret messages inside normal text using invisible characters"
 
     module:registerCommand("hide", utils.hasArgs(hide), "Encodes a secret into invisible zero-width characters")
     module:registerCommand("reveal", reveal, "Decodes hidden messages from the text")
